@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f5f2;
+  --foreground: #1c1917;
+  --aevum-surface: #fffcf8;
+  --aevum-soft: #efe9e1;
+  --aevum-accent: #5b7c6d;
+  --aevum-muted: #78716c;
+  --aevum-border: #e7e0d8;
+  --aevum-ink: #292524;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-aevum-surface: var(--aevum-surface);
+  --color-aevum-soft: var(--aevum-soft);
+  --color-aevum-accent: var(--aevum-accent);
+  --color-aevum-muted: var(--aevum-muted);
+  --color-aevum-border: var(--aevum-border);
+  --color-aevum-ink: var(--aevum-ink);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+}
