@@ -21,7 +21,7 @@ function detectCrisis(text: string): boolean {
   return CRISIS_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-const FREE_TOKENS_PER_DAY = 3;
+const FREE_TOKENS_PER_DAY = 25;
 
 function getTodayKey() {
   return `aevum_tokens_${new Date().toISOString().slice(0, 10)}`;
@@ -182,10 +182,10 @@ export default function ChatInterface() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
             <h2 className="text-lg font-semibold text-gray-900 mb-2">
-              You've used your 3 free reflections today
+              DAMN! You've used your free reflections for today
             </h2>
             <p className="text-gray-600 text-sm mb-4">
-              Free tokens reset at midnight. Or upgrade to Premium for 10 reflections per day — ₹199/month.
+              Free tokens reset at midnight. Or upgrade to Premium for more reflections per day — ₹199/month.
             </p>
             <div className="space-y-2">
               <button onClick={() => setShowUpgradePrompt(false)} className="w-full bg-gray-900 text-white rounded-xl py-3 text-sm font-medium hover:bg-gray-700 transition">
