@@ -226,10 +226,11 @@ export default function ChatInterface() {
                   <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
                   <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
                   <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
-                </div>
-              </div>
-            </div>
-            <div ref={bottomRef} />
+                  </div>
+                  </div>
+          </div>
+          )}
+          <div ref={bottomRef} />
         </div>
       )}
 
