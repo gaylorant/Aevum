@@ -21,7 +21,7 @@ function detectCrisis(text: string): boolean {
   return CRISIS_KEYWORDS.some((kw) => lower.includes(kw));
 }
 
-const FREE_TOKENS_PER_DAY = 25;
+const FREE_TOKENS_PER_DAY = 50;
 
 function getTodayKey() {
   return `aevum_tokens_${new Date().toISOString().slice(0, 10)}`;
