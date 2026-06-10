@@ -35,7 +35,7 @@ export default function HomePage() {
         <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
             href="/chat"
-            className="rounded-xl bg-sameva-accent px-6 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90"
+            className="rounded-xl px-6 py-3 text-sm font-medium text-white transition-opacity hover:opacity-90" style={{backgroundColor: "#6C63FF"}}
           >
             Start a private chat
           </Link>
