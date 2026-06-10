@@ -81,6 +81,7 @@ export default function ChatInterface() {
   const [showCrisisModal, setShowCrisisModal] = useState(false);
   const [tokensUsed, setTokensUsed] = useState(0);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
+  const [crisisMessageCount, setCrisisMessageCount] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -107,7 +108,9 @@ export default function ChatInterface() {
       return;
     }
 
-    if (detectCrisis(text)) setShowCrisisModal(true);
+    if (detectCrisis(text)) {
+      setCrisisMessageCount(prev => prev + 1);
+    }    
 
     const userMessage: Message = { role: "user", content: text };
     const updatedMessages = [...messages, userMessage];
