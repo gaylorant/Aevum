@@ -86,6 +86,13 @@ export default function ChatInterface() {
 
   useEffect(() => {
     setTokensUsed(getTokensUsedToday());
+
+    // Send opening message from Aevum on load
+    const openingMessage: Message = {
+      role: "assistant",
+      content: "hey, welcome to Aevum 👋 just so you know — this is fully private. nothing you say here gets stored, no one's reading this, and i forget everything the moment you close this tab. zero tracking, no account needed.\n\ntwo things worth knowing: if something hits mid-chat — like an actual realisation or a thought you don't want to lose — hit Save as Memory Capsule at the bottom. it saves just that one thing, not the whole convo. think of it like bookmarking a thought before it disappears.\n\nthere's also Peer Circles — anonymous 5-person voice/video rooms where you can talk to real people going through similar stuff. no real names, no pressure.\n\nanyway, that's the place. i'm here whenever you're ready.",
+    };
+    setMessages([openingMessage]);
   }, []);
 
   useEffect(() => {
@@ -258,16 +265,7 @@ export default function ChatInterface() {
         </div>
       )}
 
-      {/* Empty state */}
-      {messages.length === 0 && (
-        <div className="flex-1 flex flex-col items-center justify-center text-center gap-3 pb-8">
-          <p className="text-2xl font-semibold text-gray-800">what's on your mind?</p>
-          <p className="text-sm text-gray-400 max-w-xs">
-            nothing you say here is stored. it disappears when you close this tab.
-          </p>
-          <p className="text-xs text-gray-300 mt-2">{tokensLeft} reflection{tokensLeft !== 1 ? "s" : ""} left today</p>
-        </div>
-      )}
+      
 
       {/* Messages */}
       {messages.length > 0 && (
