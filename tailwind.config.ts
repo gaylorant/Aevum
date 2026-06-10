@@ -10,19 +10,20 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        "Sameva-accent": "#6C63FF",
-        "Sameva-ink": "#1A1A2E",
-        "Sameva-muted": "#6B7280",
-        "Sameva-surface": "#FFFFFF",
-        "Sameva-soft": "#F3F4F6",
-        "Sameva-border": "#E5E7EB",
-        // Dark mode variants
-        "Sameva-dark-bg": "#0F0F1A",
-        "Sameva-dark-surface": "#1A1A2E",
-        "Sameva-dark-soft": "#242438",
-        "Sameva-dark-border": "#2E2E4A",
-        "Sameva-dark-ink": "#F0F0FF",
-        "Sameva-dark-muted": "#9CA3AF",
+        sameva: {
+          accent: "#6C63FF",
+          ink: "#1A1A2E",
+          muted: "#6B7280",
+          surface: "#FFFFFF",
+          soft: "#F3F4F6",
+          border: "#E5E7EB",
+          "dark-bg": "#0F0F1A",
+          "dark-surface": "#1A1A2E",
+          "dark-soft": "#242438",
+          "dark-border": "#2E2E4A",
+          "dark-ink": "#F0F0FF",
+          "dark-muted": "#9CA3AF",
+        },
       },
     },
   },
