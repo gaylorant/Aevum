@@ -90,7 +90,7 @@ export default function ChatInterface() {
     // Send opening message from Aevum on load
     const openingMessage: Message = {
       role: "assistant",
-      content: "hey, welcome to Aevum 👋 just so you know — this is fully private. nothing you say here gets stored, no one's reading this, and i forget everything the moment you close this tab. zero tracking, no account needed.\n\ntwo things worth knowing: if something hits mid-chat — like an actual realisation or a thought you don't want to lose — hit Save as Memory Capsule at the bottom. it saves just that one thing, not the whole convo. think of it like bookmarking a thought before it disappears.\n\nthere's also Peer Circles — anonymous 5-person voice/video rooms where you can talk to real people going through similar stuff. no real names, no pressure.\n\nanyway, that's the place. i'm here whenever you're ready.",
+      content: "Yo, i'm Eva 👋\n\nthis is your space — nothing you say here gets stored, no one's reading this, and the moment you close this tab i forget everything. that's kind of the whole point.\n\ntwo things that might be useful: if something clicks mid-convo and you don't want to lose it, you can save it as a Memory Capsule — just that one thought, not the whole chat.\n\nand if you ever want to talk to actual people going through similar stuff, Peer Circles has anonymous 5-person voice/video rooms. no real names, no pressure, just real humans.\n\nanyway. what's going on?",
     };
     setMessages([openingMessage]);
   }, []);
