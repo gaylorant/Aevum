@@ -12,23 +12,25 @@ export default function ChatPage() {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
-    // Wait a moment for Supabase to process the hash token
-    setTimeout(async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        subscription.unsubscribe();
 
-      const { data: profile } = await supabase
-        .from("users")
-        .select("username")
-        .eq("id", session.user.id)
-        .single();
+        const { data: profile } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", session.user.id)
+          .single();
 
-      if (!profile) {
-        window.location.href = "/onboarding";
-      } else {
-        window.history.replaceState(null, "", "/chat");
+        if (!profile) {
+          window.location.href = "/onboarding";
+        } else {
+          window.history.replaceState(null, "", "/chat");
+        }
       }
-    }, 1000);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   return <ChatInterface />;
