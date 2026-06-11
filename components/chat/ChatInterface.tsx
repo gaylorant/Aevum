@@ -98,6 +98,27 @@ export default function ChatInterface() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes("access_token")) {
+      const supabase = getSupabaseClient();
+      supabase?.auth.getSession().then(async ({ data }) => {
+        if (data.session) {
+          const { data: profile } = await supabase
+            .from("users")
+            .select("username")
+            .eq("id", data.session.user.id)
+            .single();
+          
+          if (!profile) {
+            window.location.href = "/onboarding";
+          } else {
+            window.location.hash = "";
+          }
+        }
+      });
+    }
+  }, []);
 
   useEffect(() => {
     const handleUnload = () => setMessages([]);
