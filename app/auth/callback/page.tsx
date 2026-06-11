@@ -9,60 +9,37 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const supabase = getSupabaseClient();
-    if (!supabase) return;
+    if (!supabase) {
+      alert("NO SUPABASE CLIENT");
+      return;
+    }
 
     const hash = window.location.hash;
+    alert("HASH: " + hash.substring(0, 100));
 
     if (hash && hash.includes("access_token")) {
-      // Parse the hash fragment manually
       const params = new URLSearchParams(hash.substring(1));
       const accessToken = params.get("access_token");
       const refreshToken = params.get("refresh_token");
+
+      alert("ACCESS TOKEN EXISTS: " + !!accessToken + " | REFRESH TOKEN EXISTS: " + !!refreshToken);
 
       if (accessToken && refreshToken) {
         supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken,
         }).then(async ({ data, error }) => {
+          alert("SET SESSION ERROR: " + JSON.stringify(error) + " | USER: " + data?.session?.user?.email);
           if (error || !data.session) {
             router.replace("/login");
             return;
           }
-
-          const { data: profile } = await supabase
-            .from("users")
-            .select("username")
-            .eq("id", data.session.user.id)
-            .single();
-
-          if (!profile) {
-            router.replace("/onboarding");
-          } else {
-            router.replace("/chat");
-          }
+          router.replace("/chat");
         });
-      } else {
-        router.replace("/login");
       }
     } else {
-      // No hash — check if already signed in
-      supabase.auth.getSession().then(async ({ data: { session } }) => {
-        if (!session) {
-          router.replace("/login");
-          return;
-        }
-        const { data: profile } = await supabase
-          .from("users")
-          .select("username")
-          .eq("id", session.user.id)
-          .single();
-
-        if (!profile) {
-          router.replace("/onboarding");
-        } else {
-          router.replace("/chat");
-        }
-      });
+      alert("NO HASH FOUND — going to login");
+      router.replace("/login");
     }
   }, [router]);
 
