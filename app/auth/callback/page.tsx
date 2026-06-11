@@ -11,34 +11,59 @@ export default function AuthCallbackPage() {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === "SIGNED_IN" && session) {
-        subscription.unsubscribe();
+    const hash = window.location.hash;
+
+    if (hash && hash.includes("access_token")) {
+      // Parse the hash fragment manually
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get("access_token");
+      const refreshToken = params.get("refresh_token");
+
+      if (accessToken && refreshToken) {
+        supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        }).then(async ({ data, error }) => {
+          if (error || !data.session) {
+            router.replace("/login");
+            return;
+          }
+
+          const { data: profile } = await supabase
+            .from("users")
+            .select("username")
+            .eq("id", data.session.user.id)
+            .single();
+
+          if (!profile) {
+            router.replace("/onboarding");
+          } else {
+            router.replace("/chat");
+          }
+        });
+      } else {
+        router.replace("/login");
+      }
+    } else {
+      // No hash — check if already signed in
+      supabase.auth.getSession().then(async ({ data: { session } }) => {
+        if (!session) {
+          router.replace("/login");
+          return;
+        }
         const { data: profile } = await supabase
           .from("users")
           .select("username")
           .eq("id", session.user.id)
           .single();
+
         if (!profile) {
           router.replace("/onboarding");
         } else {
           router.replace("/chat");
         }
-      } else if (event === "SIGNED_OUT") {
-        subscription.unsubscribe();
-        router.replace("/login");
-      }
-    });
-
-    const timeout = setTimeout(() => {
-      subscription.unsubscribe();
-      router.replace("/login");
-    }, 5000);
-
-    return () => {
-      clearTimeout(timeout);
-      subscription.unsubscribe();
-    };
+      });
+    }
   }, [router]);
 
   return (
