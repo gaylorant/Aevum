@@ -47,11 +47,24 @@ export default function Nav() {
       }
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
       setUser(session?.user ?? null);
       if (!session?.user) {
         setProfile(null);
         setCapsules([]);
+        return;
+      }
+      if (event === "SIGNED_IN") {
+        const { data: p } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", session.user.id)
+          .single();
+        if (!p) {
+          window.location.href = "/onboarding";
+          return;
+        }
+        setProfile(p);
       }
     });
 
