@@ -128,27 +128,39 @@ export default function ChatInterface() {
     incrementTokensUsed();
     setTokensUsed(used + 1);
 
+    const requestBody = JSON.stringify({
+      messages: updatedMessages,
+      timeContext: getCurrentTimeContext(),
+    });
+
     try {
-      const res = await fetch("/api/chat", {
+      let res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: updatedMessages,
-          timeContext: getCurrentTimeContext(),
-        }),
+        body: requestBody,
       });
+
+      if (!res.ok) {
+        // Silent retry after 2 seconds
+        await new Promise(r => setTimeout(r, 2000));
+        res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: requestBody,
+        });
+      }
 
       if (!res.ok) throw new Error("API error");
 
       const data = await res.json();
-      const reply = data.reply ?? "something went wrong on my end, try again?";
+      const reply = data.reply ?? "lost my train of thought, say that again?";
       setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch {
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: "something went wrong on my end. try again?",
+          content: "lost my train of thought, say that again?",
         },
       ]);
     } finally {
