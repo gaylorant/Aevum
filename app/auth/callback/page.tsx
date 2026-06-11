@@ -11,24 +11,34 @@ export default function AuthCallbackPage() {
     const supabase = getSupabaseClient();
     if (!supabase) return;
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" && session) {
+        subscription.unsubscribe();
+        const { data: profile } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", session.user.id)
+          .single();
+        if (!profile) {
+          router.replace("/onboarding");
+        } else {
+          router.replace("/chat");
+        }
+      } else if (event === "SIGNED_OUT") {
+        subscription.unsubscribe();
         router.replace("/login");
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from("users")
-        .select("username")
-        .eq("id", session.user.id)
-        .single();
-
-      if (!profile) {
-        router.replace("/onboarding");
-      } else {
-        router.replace("/chat");
       }
     });
+
+    const timeout = setTimeout(() => {
+      subscription.unsubscribe();
+      router.replace("/login");
+    }, 5000);
+
+    return () => {
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, [router]);
 
   return (
