@@ -198,29 +198,42 @@ export async function POST(req: NextRequest) {
       return msg;
     });
 
-    const response = await fetch(GROQ_API_URL, {
+    const groqBody = JSON.stringify({
+      model: "llama-3.1-8b-instant",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...messagesWithTime,
+      ],
+      max_tokens: 300,
+      temperature: 0.75,
+      stream: false,
+    });
+
+    let response = await fetch(GROQ_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: "llama-3.1-8b-instant",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          ...messagesWithTime,
-        ],
-        max_tokens: 300,
-        temperature: 0.75,
-        stream: false,
-      }),
+      body: groqBody,
     });
 
     if (!response.ok) {
+      await new Promise(r => setTimeout(r, 2000));
+      response = await fetch(GROQ_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: groqBody,
+      });
+    }
+
+    if (!response.ok) {
       const error = await response.text();
-      console.error("Groq API error status:", response.status);
-      console.error("Groq API error body:", error);
-      return NextResponse.json({ error: "AI service unavailable", details: error }, { status: 502 });
+      console.error("Groq API error:", error);
+      return NextResponse.json({ error: "AI service unavailable" }, { status: 502 });
     }
 
     const data = await response.json();
