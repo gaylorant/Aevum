@@ -5,6 +5,11 @@ import { createServerClient } from '@supabase/ssr'
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Never interfere with the auth callback
+  if (pathname.startsWith('/auth')) {
+    return NextResponse.next()
+  }
+
   const response = NextResponse.next()
 
   const supabase = createServerClient(
