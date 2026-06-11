@@ -6,8 +6,12 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
 
+  const cookieStore = await cookies();
+
+  const redirectTo = code ? "/chat" : "/login";
+  const response = NextResponse.redirect(new URL(redirectTo, request.url));
+
   if (code) {
-    const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -17,6 +21,7 @@ export async function GET(request: NextRequest) {
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options);
+              response.cookies.set(name, value, options);
             });
           },
         },
@@ -34,10 +39,14 @@ export async function GET(request: NextRequest) {
         .single();
 
       if (!profile) {
-        return NextResponse.redirect(new URL("/onboarding", request.url));
+        const onboardingResponse = NextResponse.redirect(new URL("/onboarding", request.url));
+        cookieStore.getAll().forEach(({ name, value }) => {
+          onboardingResponse.cookies.set(name, value);
+        });
+        return onboardingResponse;
       }
     }
   }
 
-  return NextResponse.redirect(new URL("/chat", request.url));
+  return response;
 }
