@@ -141,7 +141,6 @@ export default function ChatInterface() {
       });
 
       if (!res.ok) {
-        // Silent retry after 2 seconds
         await new Promise(r => setTimeout(r, 2000));
         res = await fetch("/api/chat", {
           method: "POST",
@@ -149,6 +148,17 @@ export default function ChatInterface() {
           body: requestBody,
         });
       }
+
+      if (!res.ok) {
+        await new Promise(r => setTimeout(r, 3000));
+        res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: requestBody,
+        });
+      }
+
+      if (!res.ok) throw new Error("API error");
 
       if (!res.ok) throw new Error("API error");
 
