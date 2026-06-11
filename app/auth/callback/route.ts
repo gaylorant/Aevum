@@ -36,8 +36,9 @@ export async function GET(request: NextRequest) {
         .single();
 
       if (!profile) {
-        return NextResponse.redirect(new URL("/onboarding", request.url));
-      }
+  console.log("No profile found, redirecting to onboarding for user:", user.id);
+  return NextResponse.redirect(new URL("/onboarding", request.url));
+}
     }
   }
 

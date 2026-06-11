@@ -5,8 +5,8 @@ import { createServerClient } from '@supabase/ssr'
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Never interfere with the auth callback
-  if (pathname.startsWith('/auth')) {
+  // Never interfere with auth or onboarding
+  if (pathname.startsWith('/auth') || pathname.startsWith('/onboarding')) {
     return NextResponse.next()
   }
 
@@ -33,10 +33,6 @@ export async function proxy(request: NextRequest) {
 
   if (user && pathname === '/login') {
     return NextResponse.redirect(new URL('/chat', request.url))
-  }
-
-  if (!user && pathname === '/onboarding') {
-    return NextResponse.redirect(new URL('/login', request.url))
   }
 
   return response
