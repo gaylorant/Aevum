@@ -13,9 +13,7 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
+          getAll() { return cookieStore.getAll(); },
           setAll(cookiesToSet) {
             cookiesToSet.forEach(({ name, value, options }) => {
               cookieStore.set(name, value, options);
@@ -36,9 +34,8 @@ export async function GET(request: NextRequest) {
         .single();
 
       if (!profile) {
-  console.log("No profile found, redirecting to onboarding for user:", user.id);
-  return NextResponse.redirect(new URL("/onboarding", request.url));
-}
+        return NextResponse.redirect(new URL("/onboarding", request.url));
+      }
     }
   }
 
