@@ -9,38 +9,25 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const supabase = getSupabaseClient();
-    if (!supabase) {
-      alert("NO SUPABASE CLIENT");
-      return;
-    }
+    if (!supabase) return;
 
-    const hash = window.location.hash;
-    alert("HASH: " + hash.substring(0, 100));
-
-    if (hash && hash.includes("access_token")) {
-      const params = new URLSearchParams(hash.substring(1));
-      const accessToken = params.get("access_token");
-      const refreshToken = params.get("refresh_token");
-
-      alert("ACCESS TOKEN EXISTS: " + !!accessToken + " | REFRESH TOKEN EXISTS: " + !!refreshToken);
-
-      if (accessToken && refreshToken) {
-        supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        }).then(async ({ data, error }) => {
-          alert("SET SESSION ERROR: " + JSON.stringify(error) + " | USER: " + data?.session?.user?.email);
-          if (error || !data.session) {
-            router.replace("/login");
-            return;
-          }
-          router.replace("/chat");
-        });
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) {
+        router.replace("/login");
+        return;
       }
-    } else {
-      alert("NO HASH FOUND — going to login");
-      router.replace("/login");
-    }
+      const { data: profile } = await supabase
+        .from("users")
+        .select("username")
+        .eq("id", session.user.id)
+        .single();
+
+      if (!profile) {
+        router.replace("/onboarding");
+      } else {
+        router.replace("/chat");
+      }
+    });
   }, [router]);
 
   return (

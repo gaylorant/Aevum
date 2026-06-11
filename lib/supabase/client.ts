@@ -12,7 +12,13 @@ export function getSupabaseClient(): SupabaseClient | null {
   }
 
   if (!browserClient) {
-    browserClient = createBrowserClient(url, anonKey);
+    browserClient = createBrowserClient(url, anonKey, {
+      auth: {
+        flowType: "pkce",
+        detectSessionInUrl: true,
+        persistSession: true,
+      }
+    });
   }
 
   return browserClient;
