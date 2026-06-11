@@ -1,6 +1,7 @@
 // app/api/chat/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
+export const maxDuration = 30;
 
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 
@@ -217,8 +218,9 @@ export async function POST(req: NextRequest) {
 
     if (!response.ok) {
       const error = await response.text();
-      console.error("Groq API error:", error);
-      return NextResponse.json({ error: "AI service unavailable" }, { status: 502 });
+      console.error("Groq API error status:", response.status);
+      console.error("Groq API error body:", error);
+      return NextResponse.json({ error: "AI service unavailable", details: error }, { status: 502 });
     }
 
     const data = await response.json();
@@ -226,7 +228,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ reply });
   } catch (err) {
-    console.error("Chat route error:", err);
-    return NextResponse.json({ error: "Something went wrong" }, { status: 500 });
+    console.error("Chat route error full:", JSON.stringify(err, Object.getOwnPropertyNames(err)));
+    return NextResponse.json({ error: "Something went wrong", details: String(err) }, { status: 500 });
   }
 }
