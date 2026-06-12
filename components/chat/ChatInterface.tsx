@@ -82,6 +82,7 @@ export default function ChatInterface() {
   const [tokensUsed, setTokensUsed] = useState(0);
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [crisisMessageCount, setCrisisMessageCount] = useState(0);
+  const [userCapsules, setUserCapsules] = useState<string[]>([]);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -125,6 +126,20 @@ export default function ChatInterface() {
     window.addEventListener("beforeunload", handleUnload);
     return () => window.removeEventListener("beforeunload", handleUnload);
   }, []);
+  useEffect(() => {
+  const supabase = getSupabaseClient();
+  if (!supabase) return;
+  supabase.auth.getSession().then(async ({ data: { session } }) => {
+    if (!session?.user) return;
+    const { data } = await supabase
+      .from("memory_capsules")
+      .select("content")
+      .eq("user_id", session.user.id)
+      .order("created_at", { ascending: false })
+      .limit(10);
+    if (data) setUserCapsules(data.map((c) => c.content));
+  });
+}, []);
 
   const sendMessage = useCallback(async () => {
     const text = input.trim();
@@ -150,9 +165,10 @@ export default function ChatInterface() {
     setTokensUsed(used + 1);
 
     const requestBody = JSON.stringify({
-      messages: updatedMessages,
-      timeContext: getCurrentTimeContext(),
-    });
+  messages: updatedMessages,
+  timeContext: getCurrentTimeContext(),
+  capsules: userCapsules,
+});
 
     try {
       let res = await fetch("/api/chat", {
@@ -210,12 +226,9 @@ export default function ChatInterface() {
     const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
     if (!lastUserMessage) return;
     try {
-      const supabase = getSupabaseClient();
-      const { data: { session } } = await supabase?.auth.getSession() ?? { data: { session: null } };
-      await supabase?.from("memory_capsules").insert({
+      await getSupabaseClient()?.from("memory_capsules").insert({
         content: lastUserMessage.content,
         created_at: new Date().toISOString(),
-        user_id: session?.user?.id ?? null,
       });
       setSavedCapsule(true);
       setTimeout(() => setSavedCapsule(false), 4000);

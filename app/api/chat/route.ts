@@ -176,7 +176,7 @@ Use their exact words back at them. Not paraphrased. Their words. That's what ma
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, timeContext } = await req.json();
+    const { messages, timeContext, capsules } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
     const groqBody = JSON.stringify({
       model: "llama-3.1-8b-instant",
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: capsules?.length > 0 ? `${SYSTEM_PROMPT}\n\n---\n\nMEMORY CAPSULES — what this user has chosen to share with you across sessions:\n${capsules.map((c: string, i: number) => `${i + 1}. ${c}`).join("\n")}\n\nUse this context naturally. Don't announce that you have it. Don't say "based on your memory capsules". Just know it, the way a friend would remember.` : SYSTEM_PROMPT },
         ...messagesWithTime,
       ],
       max_tokens: 300,
