@@ -54,7 +54,7 @@ export default function Nav() {
         setCapsules([]);
         return;
       }
-      if (event === "SIGNED_IN") {
+      if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
         const { data: p } = await supabase
           .from("users")
           .select("username")
