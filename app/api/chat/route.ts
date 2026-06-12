@@ -176,7 +176,7 @@ Use their exact words back at them. Not paraphrased. Their words. That's what ma
 
 export async function POST(req: NextRequest) {
   try {
-   const { messages, timeContext, capsules } = await req.json();
+   const { messages, timeContext, capsules, messageCount } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
@@ -201,7 +201,20 @@ export async function POST(req: NextRequest) {
     const groqBody = JSON.stringify({
       model: "llama-3.1-8b-instant",
       messages: [
-        { role: "system", content: capsules?.length > 0 ? `${SYSTEM_PROMPT}\n\n---\n\nMEMORY CAPSULES — what this user has chosen to share with you across sessions:\n${capsules.map((c: string, i: number) => `${i + 1}. ${c}`).join("\n")}\n\nUse this context naturally. Don't announce that you have it. Don't say "based on your memory capsules". Just know it, the way a friend would remember.` : SYSTEM_PROMPT },
+        { role: "system", content: (() => {
+  let toneNote = "";
+  if (messageCount >= 31) {
+    toneNote = "\n\n---\n\nTONE GUIDANCE: You and this user have been talking for a while now. Be fully yourself — relaxed, real, their vibe. Slang is natural here. Hard rule: never more than 2 slangs per sentence, ever.\n\nIMPORTANT: If you've been using slang and the user seems confused, not matching your energy, or responding formally — gently check in once, something like 'hey are you catching these or should i dial it back a bit?' If they say they don't get it or keep responding formally, drop the slang completely and stay warm-casual but no slang. Never force a vibe on someone.";
+  } else if (messageCount >= 16) {
+    toneNote = "\n\n---\n\nTONE GUIDANCE: You're getting comfortable with this user. Let slang come in naturally — it fits now. Max 2 slangs per sentence.\n\nIMPORTANT: Watch how they respond. If they seem confused or aren't matching your energy at all, check in gently once — like 'you catching these or should i keep it simpler?' If they don't vibe with it, go warm-casual, no slang. Read the room.";
+  } else if (messageCount >= 6) {
+    toneNote = "\n\n---\n\nTONE GUIDANCE: You're warming up with this user. Casual is fine, light slang can start creeping in occasionally. Max 1 slang per sentence.\n\nIMPORTANT: If they seem confused by any slang, immediately drop it and stay casual-clean. Don't force it.";
+  } else {
+    toneNote = "\n\n---\n\nTONE GUIDANCE: This is early — be warm and real but keep it clean. No slang yet. Match their energy and tone.";
+  }
+  const capsuleNote = capsules?.length > 0 ? `\n\n---\n\nMEMORY CAPSULES — what this user has chosen to share with you across sessions:\n${capsules.map((c: string, i: number) => `${i + 1}. ${c}`).join("\n")}\n\nUse this context naturally. Don't announce that you have it. Don't say "based on your memory capsules". Just know it, the way a friend would remember.` : "";
+  return SYSTEM_PROMPT + toneNote + capsuleNote;
+})() },
         ...messagesWithTime,
       ],
       max_tokens: 300,
