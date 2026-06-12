@@ -83,6 +83,7 @@ export default function ChatInterface() {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false);
   const [crisisMessageCount, setCrisisMessageCount] = useState(0);
   const [userCapsules, setUserCapsules] = useState<string[]>([]);
+  const [messageCount, setMessageCount] = useState(0);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -127,19 +128,18 @@ export default function ChatInterface() {
     return () => window.removeEventListener("beforeunload", handleUnload);
   }, []);
   useEffect(() => {
-  const supabase = getSupabaseClient();
-  if (!supabase) return;
-  supabase.auth.getSession().then(async ({ data: { session } }) => {
-    if (!session?.user) return;
-    const { data } = await supabase
-      .from("memory_capsules")
-      .select("content")
-      .eq("user_id", session.user.id)
-      .order("created_at", { ascending: false })
-      .limit(10);
-    if (data) setUserCapsules(data.map((c) => c.content));
-  });
-}, []);
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) return;
+      const [capsulesRes, profileRes] = await Promise.all([
+        supabase.from("memory_capsules").select("content").eq("user_id", session.user.id).order("created_at", { ascending: false }).limit(10),
+        supabase.from("users").select("message_count").eq("id", session.user.id).single(),
+      ]);
+      if (capsulesRes.data) setUserCapsules(capsulesRes.data.map((c) => c.content));
+      if (profileRes.data) setMessageCount(profileRes.data.message_count ?? 0);
+    });
+  }, []);
 
   const sendMessage = useCallback(async () => {
     const text = input.trim();
@@ -164,11 +164,18 @@ export default function ChatInterface() {
     incrementTokensUsed();
     setTokensUsed(used + 1);
 
-    const requestBody = JSON.stringify({
-  messages: updatedMessages,
-  timeContext: getCurrentTimeContext(),
-  capsules: userCapsules,
-});
+   const requestBody = JSON.stringify({
+      messages: updatedMessages,
+      timeContext: getCurrentTimeContext(),
+      capsules: userCapsules,
+      messageCount,
+    });
+    setMessageCount(prev => prev + 1);
+    const supabase = getSupabaseClient();
+    const { data: { session } } = await supabase?.auth.getSession() ?? { data: { session: null } };
+    if (session?.user) {
+      supabase?.from("users").update({ message_count: messageCount + 1 }).eq("id", session.user.id);
+    }
 
     try {
       let res = await fetch("/api/chat", {
