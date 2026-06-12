@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Aevum — Your private space to reflect, vent, grieve, and grow",
+  title: "Sameva — Your private space to reflect, vent, grieve, and grow",
   description:
     "A privacy-first AI wellbeing platform. No accounts required. No chat history stored. Your data stays yours.",
 };
