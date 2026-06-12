@@ -2,30 +2,30 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabaseClient } from "@/lib/supabase/client";
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
-        router.replace("/login");
-        return;
-      }
-      const { data: profile } = await supabase
-        .from("users")
-        .select("username")
-        .eq("id", session.user.id)
-        .single();
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from("users")
+          .select("username")
+          .eq("id", session.user.id)
+          .single();
 
-      if (!profile) {
-        router.replace("/onboarding");
-      } else {
-        router.replace("/chat");
+        if (!profile) {
+          window.location.href = "/onboarding";
+        } else {
+          window.location.href = "/chat";
+        }
       }
     });
   }, [router]);
