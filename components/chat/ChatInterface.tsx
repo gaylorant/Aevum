@@ -223,19 +223,25 @@ export default function ChatInterface() {
   };
 
   const saveMemoryCapsule = async () => {
-    const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
-    if (!lastUserMessage) return;
-    try {
-      await getSupabaseClient()?.from("memory_capsules").insert({
-        content: lastUserMessage.content,
-        created_at: new Date().toISOString(),
-      });
-      setSavedCapsule(true);
-      setTimeout(() => setSavedCapsule(false), 4000);
-    } catch {
-      console.error("Failed to save capsule");
+  const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
+  if (!lastUserMessage) return;
+  try {
+    const supabase = getSupabaseClient();
+    const { data: { session } } = await supabase?.auth.getSession() ?? { data: { session: null } };
+    await supabase?.from("memory_capsules").insert({
+      content: lastUserMessage.content,
+      created_at: new Date().toISOString(),
+      user_id: session?.user?.id ?? null,
+    });
+    if (session?.user) {
+      setUserCapsules((prev) => [lastUserMessage.content, ...prev]);
     }
-  };
+    setSavedCapsule(true);
+    setTimeout(() => setSavedCapsule(false), 4000);
+  } catch {
+    console.error("Failed to save capsule");
+  }
+};
 
   const tokensLeft = Math.max(0, FREE_TOKENS_PER_DAY - tokensUsed);
 
