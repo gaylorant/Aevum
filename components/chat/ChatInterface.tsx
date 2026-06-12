@@ -210,9 +210,12 @@ export default function ChatInterface() {
     const lastUserMessage = [...messages].reverse().find((m) => m.role === "user");
     if (!lastUserMessage) return;
     try {
-      await getSupabaseClient()?.from("memory_capsules").insert({
+      const supabase = getSupabaseClient();
+      const { data: { session } } = await supabase?.auth.getSession() ?? { data: { session: null } };
+      await supabase?.from("memory_capsules").insert({
         content: lastUserMessage.content,
         created_at: new Date().toISOString(),
+        user_id: session?.user?.id ?? null,
       });
       setSavedCapsule(true);
       setTimeout(() => setSavedCapsule(false), 4000);
