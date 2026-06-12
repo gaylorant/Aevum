@@ -68,7 +68,7 @@ export default function OnboardingPage() {
       return;
     }
 
-    router.push("/chat");
+    window.location.href = "/chat";
   };
 
   return (
