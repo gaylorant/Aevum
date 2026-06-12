@@ -176,7 +176,7 @@ Use their exact words back at them. Not paraphrased. Their words. That's what ma
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages, timeContext, capsules } = await req.json();
+   const { messages, timeContext, capsules } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
