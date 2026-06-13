@@ -188,15 +188,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Inject time context into the last user message
-    const messagesWithTime = messages.map((msg: { role: string; content: string }, index: number) => {
-      if (index === messages.length - 1 && msg.role === "user" && timeContext) {
-        return {
-          ...msg,
-          content: `[TIME CONTEXT: ${timeContext}]\n\n${msg.content}`,
-        };
-      }
-      return msg;
-    });
+    const messagesWithTime = messages.map((msg: { role: string; content: string; time?: string }, index: number) => {
+  const clean = { role: msg.role, content: msg.content };
+  if (index === messages.length - 1 && msg.role === "user" && timeContext) {
+    return {
+      ...clean,
+      content: `[TIME CONTEXT: ${timeContext}]\n\n${msg.content}`,
+    };
+  }
+  return clean;
+});
 
     const groqBody = JSON.stringify({
       model: "llama-3.1-8b-instant",
