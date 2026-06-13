@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { createBrowserClient } from "@supabase/ssr";
 
@@ -28,18 +28,15 @@ export default function LoginPage() {
         @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
         @keyframes dotPulse { 0%,100%{opacity:1;box-shadow:0 0 8px #00FFFF} 50%{opacity:0.5;box-shadow:0 0 18px #00FFFF} }
         .login-card { animation: fadeUp 0.7s 0.1s both; }
-        .google-btn { transition: background 0.2s, border-color 0.2s !important; }
         .google-btn:hover { background: rgba(255,255,255,0.09) !important; border-color: rgba(255,255,255,0.2) !important; }
       `}</style>
-
       <div style={{ minHeight: "100vh", background: "#070614", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif", position: "relative", overflow: "hidden" }}>
         <div style={{ position: "fixed", width: 480, height: 480, top: -100, left: -100, background: "radial-gradient(circle,rgba(46,91,255,0.55) 0%,rgba(46,91,255,0.1) 55%,transparent 75%)", filter: "blur(72px)", animation: "blobDrift1 18s ease-in-out infinite", pointerEvents: "none", zIndex: 0 }} />
         <div style={{ position: "fixed", width: 440, height: 440, top: -80, right: -100, background: "radial-gradient(circle,rgba(0,206,209,0.5) 0%,rgba(0,206,209,0.08) 55%,transparent 75%)", filter: "blur(70px)", animation: "blobDrift2 22s ease-in-out infinite", pointerEvents: "none", zIndex: 0 }} />
         <div style={{ position: "fixed", width: 460, height: 460, bottom: -100, left: -80, background: "radial-gradient(circle,rgba(138,43,226,0.5) 0%,rgba(138,43,226,0.08) 55%,transparent 75%)", filter: "blur(72px)", animation: "blobDrift3 20s ease-in-out infinite", pointerEvents: "none", zIndex: 0 }} />
         <div style={{ position: "fixed", width: 420, height: 420, bottom: -80, right: -100, background: "radial-gradient(circle,rgba(0,255,204,0.45) 0%,rgba(0,255,204,0.08) 55%,transparent 75%)", filter: "blur(68px)", animation: "blobDrift4 24s ease-in-out infinite", pointerEvents: "none", zIndex: 0 }} />
-
         <div className="login-card" style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 400, margin: "0 24px", background: "rgba(255,255,255,0.03)", backdropFilter: "blur(40px)", border: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(203,190,255,0.15)", borderRadius: 28, padding: "52px 40px", textAlign: "center", boxShadow: "0 32px 80px rgba(0,0,0,0.5)" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", color: "#b8c3ff", background: "rgba(184,195,255,0.07)", border: "1px solid rgba(184,195,255,0.14)", padding: "5px 16px", borderRadius: 9999, marginBottom: 32 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase" as const, color: "#b8c3ff", background: "rgba(184,195,255,0.07)", border: "1px solid rgba(184,195,255,0.14)", padding: "5px 16px", borderRadius: 9999, marginBottom: 32 }}>
             <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#00FFFF", display: "inline-block", animation: "dotPulse 2s ease-in-out infinite" }} />
             Privacy First · AI Wellbeing
           </div>
