@@ -43,7 +43,7 @@ export default function HomePage() {
             Sign In
           </Link>
           <Link
-            href="/chat"
+            href="/login"
             className="text-[13px] font-[800] font-sans px-[24px] py-[10px] rounded-full text-[#efefff]"
             style={{ backgroundColor: "#2E5BFF", boxShadow: "0 0 32px -6px #2E5BFF" }}
           >
