@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Nav from "@/components/Nav";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,14 +30,13 @@ export default function RootLayout({
     >
       <head>
         <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400&family=Instrument+Serif:ital@0;1&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=Syne:wght@800&family=Plus+Jakarta+Sans:wght@600;700&display=swap"
           rel="stylesheet"
         />
       </head>
       <body className="flex min-h-full flex-col bg-background text-foreground">
-  <ConditionalNav />
-  <main className="flex-1">{children}</main>
-</body>
+        <main className="flex-1">{children}</main>
+      </body>
     </html>
   );
 }
