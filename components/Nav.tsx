@@ -117,14 +117,14 @@ export default function Nav() {
       <header className="sticky top-0 z-40 border-b border-slate-900/80 bg-[#060511]/80 backdrop-blur-xl">
         <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
           {/* Logo with gradient hover — no flicker */}
-          <Link href="/" className="group relative text-lg font-semibold tracking-tight select-none">
-            <span className="text-slate-400 transition-opacity duration-500 group-hover:opacity-0">
-              sameva
-            </span>
-            <span className="absolute inset-0 bg-gradient-to-r from-teal-300 via-blue-400 to-purple-400 bg-clip-text text-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100">
-              sameva
-            </span>
-          </Link>
+          <Link href="/" className="text-lg font-semibold tracking-tight select-none font-serif" style={{
+  background: 'linear-gradient(90deg, #2dd4bf, #3b82f6, #a855f7)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text',
+}}>
+  sameva
+</Link>
 
           <div className="flex items-center gap-2">
             <ul className="flex flex-wrap items-center gap-1 sm:gap-2">

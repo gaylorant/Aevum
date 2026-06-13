@@ -36,9 +36,9 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-full flex-col bg-background text-foreground">
-        <Nav />
-        <main className="flex-1">{children}</main>
-      </body>
+  <ConditionalNav />
+  <main className="flex-1">{children}</main>
+</body>
     </html>
   );
 }
