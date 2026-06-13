@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { usePathname } from "next/navigation";
 
 const links = [
   { href: "/", label: "Home" },
@@ -23,6 +24,7 @@ interface UserProfile {
 }
 
 export default function Nav() {
+  
   const [showModal, setShowModal] = useState(false);
   const [user, setUser] = useState<{ id: string } | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
