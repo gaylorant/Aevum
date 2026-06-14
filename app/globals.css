@@ -3,8 +3,7 @@
 html,
 body {
   background-color: #060511 !important;
-  overflow-x: hidden;
-  overscroll-behavior: none;
+  overscroll-behavior-x: none;
 }
 
 :root {

@@ -11,8 +11,7 @@ const marqueeItems = [...samevaWords, ...samevaWords, ...samevaWords];
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#060511] text-[#e2e1ef] relative overflow-x-hidden font-sans">
-
+    <div className="min-h-screen bg-[#060511] text-[#e2e1ef] relative font-sans" style={{overflowX: 'clip', overflowY: 'auto'}}>
       <SanskritBackground />
       <InteractiveBlobs />
 
@@ -43,7 +42,7 @@ export default function HomePage() {
           {/* Sign In — hidden on mobile */}
           <Link
             href="/login"
-            className="hidden md:inline-flex text-[13px] font-[800] font-sans px-[22px] py-[10px] rounded-full bg-transparent text-[#cbbeff] border border-[rgba(203,190,255,0.22)] backdrop-blur-md hover:border-[rgba(203,190,255,0.45)] hover:bg-[rgba(203,190,255,0.06)] transition-all duration-200"
+            className="inline-flex text-[13px] font-[800] font-sans px-[22px] py-[10px] rounded-full bg-transparent text-[#cbbeff] border border-[rgba(203,190,255,0.22)] backdrop-blur-md hover:border-[rgba(203,190,255,0.45)] hover:bg-[rgba(203,190,255,0.06)] transition-all duration-200"
           >
             Sign In
           </Link>
