@@ -33,8 +33,7 @@ export default function Nav() {
   const [logoHover, setLogoHover] = useState(false);
   const logoRef = useRef<HTMLAnchorElement>(null);
 
-  if (pathname === "/chat" || pathname === "/login" || pathname === "/onboarding") return null;
-
+  
   useEffect(() => {
     const supabase = getSupabaseClient();
     if (!supabase) return;
@@ -68,8 +67,11 @@ export default function Nav() {
 
     return () => listener.subscription.unsubscribe();
   }, []);
+  
+  if (pathname === "/chat" || pathname === "/login" || pathname === "/onboarding") return null;
 
-  const openModal = async () => {
+
+const openModal = async () => {
     setShowModal(true);
     if (!user) return;
     setLoadingCapsules(true);
