@@ -27,14 +27,14 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // NOT logged in + trying to access protected route → send to login
+  // Not logged in → protect private routes
   if (!user && !isPublic(pathname)) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('next', pathname)
     return NextResponse.redirect(loginUrl)
   }
 
-  // Logged in + trying to access login/signup → send to chat
+  // Logged in → only redirect away from login/signup pages
   if (user && (pathname === '/login' || pathname === '/signup')) {
     return NextResponse.redirect(new URL('/chat', request.url))
   }
