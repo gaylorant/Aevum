@@ -1,39 +1,49 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+
+const PUBLIC_ROUTES = ['/login', '/signup', '/auth']
+const isPublic = (path: string) => PUBLIC_ROUTES.some(r => path.startsWith(r))
 
 export async function middleware(request: NextRequest) {
   const response = NextResponse.next();
+  const { pathname } = request.nextUrl
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
+        getAll() {
+          return request.cookies.getAll()
         },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options });
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: "", ...options });
-          response.cookies.set({ name, value: "", ...options });
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, options)
+          })
         },
       },
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
+  // getUser() validates server-side — never use getSession() at auth boundaries
+  const { data: { user } } = await supabase.auth.getUser();
 
-  // Protect onboarding — must be logged in
-  if (request.nextUrl.pathname.startsWith("/onboarding") && !session) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // Logged in → bounce away from login/signup
+  if (user && isPublic(pathname)) {
+    return NextResponse.redirect(new URL('/chat', request.url))
+  }
+
+  // Not logged in → protect onboarding and app routes
+  if (!user && !isPublic(pathname)) {
+    const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('next', pathname)
+    return NextResponse.redirect(loginUrl)
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/onboarding/:path*"],
+  // Covers everything except Next.js internals and static files
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
