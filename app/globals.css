@@ -1,14 +1,21 @@
 @import "tailwindcss";
 
+html,
+body {
+  background-color: #060511 !important;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+}
+
 :root {
-  --background: #f7f5f2;
-  --foreground: #1c1917;
-  --aevum-surface: #fffcf8;
-  --aevum-soft: #efe9e1;
-  --aevum-accent: #5b7c6d;
-  --aevum-muted: #78716c;
-  --aevum-border: #e7e0d8;
-  --aevum-ink: #292524;
+  --background: #060511;
+  --foreground: #e2e1ef;
+  --aevum-surface: #0d0c1f;
+  --aevum-soft: #13112a;
+  --aevum-accent: #2e5bff;
+  --aevum-muted: #8e90a2;
+  --aevum-border: #1e1d35;
+  --aevum-ink: #c4c5d9;
 }
 
 @theme inline {
@@ -27,5 +34,19 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(184, 195, 255, 0.15);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(184, 195, 255, 0.3);
 }
