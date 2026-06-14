@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { createUserProfile, isUsernameTaken } from "@/lib/auth/actions";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -26,27 +27,30 @@ export default function OnboardingPage() {
       setError("Only letters, numbers and underscores."); return;
     }
     setLoading(true); setError("");
-    const { data } = await supabase.from("users").select("username").eq("username", username).single();
-    if (data) { setError("Username already taken."); setLoading(false); return; }
+    const taken = await isUsernameTaken(username);
+    if (taken) { setError("Username already taken."); setLoading(false); return; }
     setLoading(false);
     setStep("password");
   };
 
   const handleSubmit = async () => {
-    // CHANGED: was !== 8, now < 8
     if (password.length < 8) { setError("Password must be more than 8 characters."); return; }
-    if (pin && (pin.length !== 4 || !/^\d+$/.test(pin))) { setError("PIN must be exactly 4 digits."); return; }
+    // PIN must be exactly 4 digits if provided
+    if (pin && (pin.length !== 4 || !/^\d+$/.test(pin))) {
+      setError("PIN must be exactly 4 digits."); return;
+    }
     setLoading(true); setError("");
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { router.push("/login"); return; }
 
-    const { error: insertError } = await supabase.from("users").insert({
-      id: user.id,
+    // createUserProfile hashes both password and PIN properly
+    const { error: insertError } = await createUserProfile(
+      user.id,
       username,
-      password_hash: password,
-      pin_hash: pin || null,
-    });
+      password,
+      pin || undefined
+    );
 
     if (insertError) { setError("Something went wrong. Try again."); setLoading(false); return; }
     router.push("/chat");
@@ -65,13 +69,11 @@ export default function OnboardingPage() {
       `}</style>
 
       <div style={{ minHeight: "100vh", background: "#070614", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "Inter, sans-serif", position: "relative", overflow: "hidden" }}>
-
         <div style={{ position: "fixed", width: 480, height: 480, top: -100, left: -100, background: "radial-gradient(circle,rgba(46,91,255,0.5) 0%,transparent 70%)", filter: "blur(80px)", animation: "blobDrift1 18s ease-in-out infinite", pointerEvents: "none", zIndex: 0 }} />
         <div style={{ position: "fixed", width: 440, height: 440, bottom: -100, right: -100, background: "radial-gradient(circle,rgba(138,43,226,0.45) 0%,transparent 70%)", filter: "blur(80px)", animation: "blobDrift2 22s ease-in-out infinite", pointerEvents: "none", zIndex: 0 }} />
 
         <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 420, margin: "0 24px", background: "rgba(255,255,255,0.03)", backdropFilter: "blur(40px)", border: "1px solid rgba(255,255,255,0.07)", borderBottom: "1px solid rgba(203,190,255,0.15)", borderRadius: 28, padding: "52px 40px", boxShadow: "0 32px 80px rgba(0,0,0,0.5)", animation: "fadeUp 0.7s 0.1s both" }}>
 
-          {/* Steps indicator */}
           <div style={{ display: "flex", gap: 6, marginBottom: 36 }}>
             {["username", "password", "pin"].map((s, i) => (
               <div key={s} style={{ flex: 1, height: 3, borderRadius: 9999, background: step === s ? "#3b82f6" : ["username","password","pin"].indexOf(step) > i ? "rgba(59,130,246,0.4)" : "rgba(255,255,255,0.08)", transition: "background 0.3s" }} />
@@ -106,19 +108,16 @@ export default function OnboardingPage() {
           {step === "password" && (
             <>
               <h1 style={{ fontFamily: "Instrument Serif, serif", fontSize: 32, fontWeight: 400, color: "#fff", marginBottom: 8, lineHeight: 1.2 }}>Set a password</h1>
-              {/* CHANGED: updated description text */}
-              <p style={{ fontSize: 13, color: "rgba(226,225,239,0.4)", marginBottom: 32, lineHeight: 1.7 }}>You'll enter this every time you log in. Must be more than 8 characters.</p>
+              <p style={{ fontSize: 13, color: "rgba(226,225,239,0.4)", marginBottom: 32, lineHeight: 1.7 }}>You'll use this to log in. Must be more than 8 characters.</p>
               <div style={{ marginBottom: 20 }}>
-                {/* CHANGED: updated label text */}
                 <label style={{ fontSize: 11, fontWeight: 600, color: "rgba(184,195,255,0.5)", letterSpacing: "0.06em", textTransform: "uppercase" as const, display: "block", marginBottom: 8 }}>Password (min. 8 characters)</label>
                 <input
                   className="input-field"
                   type="password"
                   value={password}
                   onChange={e => { setPassword(e.target.value); setError(""); }}
-                  onKeyDown={e => e.key === "Enter" && setStep("pin")}
+                  onKeyDown={e => e.key === "Enter" && (() => { if (password.length < 8) { setError("Password must be more than 8 characters."); return; } setError(""); setStep("pin"); })()}
                   placeholder="••••••••"
-                  // CHANGED: removed maxLength so user can type more than 8
                   style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "13px 16px", fontSize: 15, color: "#e2e1ef", fontFamily: "Inter, sans-serif", transition: "border-color 0.2s" }}
                 />
               </div>
@@ -128,19 +127,26 @@ export default function OnboardingPage() {
           {step === "pin" && (
             <>
               <h1 style={{ fontFamily: "Instrument Serif, serif", fontSize: 32, fontWeight: 400, color: "#fff", marginBottom: 8, lineHeight: 1.2 }}>Add a PIN <span style={{ color: "rgba(226,225,239,0.3)", fontSize: 22 }}>(optional)</span></h1>
-              <p style={{ fontSize: 13, color: "rgba(226,225,239,0.4)", marginBottom: 32, lineHeight: 1.7 }}>A 4-digit PIN to access your Memory Capsules. Skip if you don't need it.</p>
+              <p style={{ fontSize: 13, color: "rgba(226,225,239,0.4)", marginBottom: 32, lineHeight: 1.7 }}>A 4-digit PIN to lock your Memory Capsules. Numbers only. Skip if you don't need it.</p>
               <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: "rgba(184,195,255,0.5)", letterSpacing: "0.06em", textTransform: "uppercase" as const, display: "block", marginBottom: 8 }}>4-digit PIN</label>
+                <label style={{ fontSize: 11, fontWeight: 600, color: "rgba(184,195,255,0.5)", letterSpacing: "0.06em", textTransform: "uppercase" as const, display: "block", marginBottom: 8 }}>4-digit PIN (numbers only)</label>
                 <input
                   className="input-field"
                   type="password"
+                  inputMode="numeric"
                   value={pin}
-                  onChange={e => { setPin(e.target.value.replace(/\D/g, "")); setError(""); }}
+                  onChange={e => {
+                    // Only allow digits
+                    const digitsOnly = e.target.value.replace(/\D/g, "");
+                    setPin(digitsOnly);
+                    setError("");
+                  }}
                   onKeyDown={e => e.key === "Enter" && handleSubmit()}
                   placeholder="••••"
                   maxLength={4}
-                  style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "13px 16px", fontSize: 15, color: "#e2e1ef", fontFamily: "Inter, sans-serif", transition: "border-color 0.2s" }}
+                  style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "13px 16px", fontSize: 15, color: "#e2e1ef", fontFamily: "Inter, sans-serif", transition: "border-color 0.2s", letterSpacing: "0.3em" }}
                 />
+                <p style={{ fontSize: 11, color: "rgba(196,197,217,0.35)", marginTop: 6 }}>digits only · this locks your Memory Capsules</p>
               </div>
             </>
           )}
@@ -149,12 +155,18 @@ export default function OnboardingPage() {
 
           <button
             className="btn-main"
-            // CHANGED: validation on password step now checks < 8 instead of !== 8
-            onClick={step === "username" ? checkUsername : step === "password" ? () => { if (password.length < 8) { setError("Password must be more than 8 characters."); return; } setError(""); setStep("pin"); } : handleSubmit}
+            onClick={
+              step === "username" ? checkUsername
+              : step === "password" ? () => {
+                  if (password.length < 8) { setError("Password must be more than 8 characters."); return; }
+                  setError(""); setStep("pin");
+                }
+              : handleSubmit
+            }
             disabled={loading}
             style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: "#3b82f6", border: "none", fontSize: 14, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", boxShadow: "0 0 28px -6px rgba(59,130,246,0.6)", opacity: loading ? 0.6 : 1 }}
           >
-            {loading ? "Checking..." : step === "pin" ? "Finish setup →" : "Continue →"}
+            {loading ? "Please wait..." : step === "pin" ? "Finish setup →" : "Continue →"}
           </button>
 
           {step === "pin" && (
@@ -168,7 +180,6 @@ export default function OnboardingPage() {
               ← Back
             </button>
           )}
-
         </div>
       </div>
     </>

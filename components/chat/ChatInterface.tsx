@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { verifyPin } from "@/lib/auth/actions";
 
 interface Message {
   role: "user" | "assistant";
@@ -92,6 +93,8 @@ const SUGGESTIONS = [
   { title: "just talking", sub: "no agenda, just here", text: "i just need to talk, nothing specific", color: "rgba(45,212,191,0.08)", border: "rgba(45,212,191,0.15)", stroke: "#a0ffee", icon: "chat" },
 ];
 
+type PinAction = "save" | "view";
+
 export default function ChatInterface() {
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -110,16 +113,25 @@ export default function ChatInterface() {
   const [showChips, setShowChips] = useState(true);
   const [selectedChip, setSelectedChip] = useState<string | null>(null);
 
+  // PIN gate state
+  const [pinHash, setPinHash] = useState<string | null>(null);
+  const [capsulesUnlocked, setCapsulesUnlocked] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [pinError, setPinError] = useState("");
+  const [pinVerifying, setPinVerifying] = useState(false);
+  const [pendingPinAction, setPendingPinAction] = useState<PinAction | null>(null);
+
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const orbRef = useRef<HTMLCanvasElement>(null);
+  const pinInputRef = useRef<HTMLInputElement>(null);
   const orbTRef = useRef(0);
   const moodRef = useRef<Mood>("neutral");
 
-  // Sync mood ref
   useEffect(() => { moodRef.current = mood; }, [mood]);
 
-  // Load user data
+  // Load user data — now also fetching pin_hash
   useEffect(() => {
     setTokensUsed(getTokensUsedToday());
     const supabase = getSupabaseClient();
@@ -129,12 +141,19 @@ export default function ChatInterface() {
       setUserId(session.user.id);
       const [capRes, profRes] = await Promise.all([
         supabase.from("memory_capsules").select("content").eq("user_id", session.user.id).order("created_at", { ascending: false }).limit(10),
-        supabase.from("users").select("username, is_premium, message_count").eq("id", session.user.id).single(),
+        // Added pin_hash to the select
+        supabase.from("users").select("username, is_premium, message_count, pin_hash").eq("id", session.user.id).single(),
       ]);
       if (capRes.data) setUserCapsules(capRes.data.map((c: { content: string }) => c.content));
       if (profRes.data) {
         setProfile({ username: profRes.data.username, is_premium: profRes.data.is_premium });
         setMessageCount(profRes.data.message_count ?? 0);
+        // Store pin_hash — if null user has no PIN so capsules are unlocked by default
+        if (profRes.data.pin_hash) {
+          setPinHash(profRes.data.pin_hash);
+        } else {
+          setCapsulesUnlocked(true); // no PIN set, always unlocked
+        }
       }
     });
   }, []);
@@ -147,6 +166,13 @@ export default function ChatInterface() {
       time: getTime(),
     }]);
   }, []);
+
+  // Focus PIN input when modal opens
+  useEffect(() => {
+    if (showPinModal) {
+      setTimeout(() => pinInputRef.current?.focus(), 100);
+    }
+  }, [showPinModal]);
 
   // Orb animation
   useEffect(() => {
@@ -184,24 +210,74 @@ export default function ChatInterface() {
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // Auto scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
-  // Wipe on close
   useEffect(() => {
     const handleUnload = () => setMessages([]);
     window.addEventListener("beforeunload", handleUnload);
     return () => window.removeEventListener("beforeunload", handleUnload);
   }, []);
 
-  // Auto-resize textarea
   const handleInput = () => {
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = "auto";
     el.style.height = Math.min(el.scrollHeight, 120) + "px";
+  };
+
+  // Open PIN modal — gate for save or view
+  const requirePin = (action: PinAction) => {
+    if (capsulesUnlocked) {
+      // Already unlocked this session — proceed directly
+      if (action === "save") doSaveCapsule();
+      return;
+    }
+    setPendingPinAction(action);
+    setPinInput("");
+    setPinError("");
+    setShowPinModal(true);
+  };
+
+  // Verify PIN then execute pending action
+  const handlePinSubmit = async () => {
+    if (pinInput.length !== 4) { setPinError("Enter your 4-digit PIN."); return; }
+    if (!pinHash) return;
+    setPinVerifying(true);
+    setPinError("");
+    try {
+      const ok = await verifyPin(pinInput, pinHash);
+      if (!ok) { setPinError("Wrong PIN. Try again."); setPinInput(""); setPinVerifying(false); return; }
+      // Correct PIN — unlock for this session
+      setCapsulesUnlocked(true);
+      setShowPinModal(false);
+      setPinInput("");
+      if (pendingPinAction === "save") await doSaveCapsule();
+      // For "view" the capsules are now shown because capsulesUnlocked is true
+    } catch {
+      setPinError("Something went wrong. Try again.");
+    } finally {
+      setPinVerifying(false);
+    }
+  };
+
+  // The actual save logic — only called after PIN check passes
+  const doSaveCapsule = async () => {
+    const lastUser = [...messages].reverse().find(m => m.role === "user");
+    if (!lastUser) return;
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session } } = await supabase?.auth.getSession() ?? { data: { session: null } };
+      await supabase?.from("memory_capsules").insert({
+        content: lastUser.content,
+        created_at: new Date().toISOString(),
+        user_id: session?.user?.id ?? null,
+      });
+      if (session?.user) setUserCapsules(prev => [lastUser.content, ...prev]);
+      setSavedCapsule(true);
+      setTimeout(() => setSavedCapsule(false), 3000);
+    } catch {}
   };
 
   const sendMessage = useCallback(async (overrideText?: string) => {
@@ -232,7 +308,6 @@ export default function ChatInterface() {
     incrementTokensUsed();
     setTokensUsed(used + 1);
 
-    // Increment message_count in Supabase
     const newCount = messageCount + 1;
     setMessageCount(newCount);
     if (userId) {
@@ -263,23 +338,6 @@ export default function ChatInterface() {
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
-  };
-
-  const saveMemoryCapsule = async () => {
-    const lastUser = [...messages].reverse().find(m => m.role === "user");
-    if (!lastUser) return;
-    try {
-      const supabase = getSupabaseClient();
-      const { data: { session } } = await supabase?.auth.getSession() ?? { data: { session: null } };
-      await supabase?.from("memory_capsules").insert({
-        content: lastUser.content,
-        created_at: new Date().toISOString(),
-        user_id: session?.user?.id ?? null,
-      });
-      if (session?.user) setUserCapsules(prev => [lastUser.content, ...prev]);
-      setSavedCapsule(true);
-      setTimeout(() => setSavedCapsule(false), 3000);
-    } catch {}
   };
 
   const clearChat = () => {
@@ -316,6 +374,7 @@ export default function ChatInterface() {
         @keyframes tdot { 0%,80%,100%{transform:translateY(0);opacity:0.5} 40%{transform:translateY(-5px);opacity:1} }
         @keyframes statusPulse { 0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,0.4)} 50%{box-shadow:0 0 0 4px rgba(74,222,128,0)} }
         @keyframes sbSpin { 0%,100%{box-shadow:0 0 16px rgba(59,130,246,0.4)} 50%{box-shadow:0 0 36px rgba(59,130,246,0.7)} }
+        @keyframes modalIn { from{opacity:0;transform:scale(0.94) translateY(12px)} to{opacity:1;transform:scale(1) translateY(0)} }
         .msg-in { animation: msgIn 0.6s cubic-bezier(0.22,1,0.36,1) both; }
         .tdot1 { animation: tdot 1.8s ease-in-out infinite; }
         .tdot2 { animation: tdot 1.8s ease-in-out infinite 0.22s; }
@@ -324,20 +383,17 @@ export default function ChatInterface() {
         .chip-item:hover { background: rgba(45,212,191,0.15); border-color: rgba(45,212,191,0.4); transform: translateY(-1px); }
         .msgs-scroll::-webkit-scrollbar { width: 3px; }
         .msgs-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 3px; }
+        .pin-digit-input:focus { border-color: rgba(45,212,191,0.6) !important; outline: none; }
       `}</style>
 
-      {/* Shell */}
       <div className="relative z-10 flex h-full">
 
         {/* SIDEBAR */}
         <aside className="hidden md:flex flex-col flex-shrink-0 overflow-hidden" style={{ width: 268, background: "rgba(5,4,14,0.7)", backdropFilter: "blur(48px)", borderRight: "1px solid rgba(255,255,255,0.05)", animation: "sideIn 0.9s cubic-bezier(0.22,1,0.36,1) both" }}>
-          
-          {/* Brand */}
           <Link href="/" className="block px-5 pt-5 pb-1 flex-shrink-0" style={{ fontFamily: "'Instrument Serif', serif", fontSize: 28, color: "#94a3b8", letterSpacing: "0.01em", textDecoration: "none", background: "linear-gradient(90deg,#2dd4bf,#3b82f6,#a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
             sameva
           </Link>
 
-          {/* Mood orb */}
           <div className="flex-shrink-0 flex flex-col items-center justify-center py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)", marginTop: 8 }}>
             <div className="relative" style={{ width: 100, height: 100, marginBottom: 12 }}>
               <canvas ref={orbRef} width={100} height={100} className="absolute inset-0 rounded-full" />
@@ -352,7 +408,6 @@ export default function ChatInterface() {
             </div>
           </div>
 
-          {/* Nav links */}
           <div className="flex-shrink-0 px-3 pt-3">
             <Link href="/chat" className="flex items-center gap-2 px-3 py-2 rounded-xl mb-1 no-underline" style={{ background: "rgba(59,130,246,0.1)", border: "1px solid rgba(59,130,246,0.2)" }}>
               <div className="flex items-center justify-center rounded-lg flex-shrink-0" style={{ width: 28, height: 28, background: "rgba(59,130,246,0.12)", border: "1px solid rgba(59,130,246,0.2)" }}>
@@ -374,7 +429,6 @@ export default function ChatInterface() {
             </Link>
           </div>
 
-          {/* Suggestions */}
           <div className="flex-1 overflow-y-auto px-3 pt-3" style={{ scrollbarWidth: "none" }}>
             <div style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: "0.12em", color: "#64748b", textTransform: "uppercase", padding: "0 5px", marginBottom: 9 }}>start here</div>
             {SUGGESTIONS.map((s, i) => (
@@ -396,7 +450,6 @@ export default function ChatInterface() {
             ))}
           </div>
 
-          {/* User chip */}
           <div className="flex items-center gap-2 flex-shrink-0" style={{ padding: "11px 13px", borderTop: "1px solid rgba(255,255,255,0.04)", cursor: "pointer" }}>
             <div className="flex items-center justify-center rounded-full flex-shrink-0" style={{ width: 28, height: 28, background: "linear-gradient(135deg,#3b82f6,#a855f7)", fontSize: 10, fontWeight: 700, color: "#fff" }}>
               {userInitials}
@@ -417,7 +470,6 @@ export default function ChatInterface() {
         {/* MAIN CHAT */}
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
 
-          {/* Topbar */}
           <div className="flex items-center justify-between flex-shrink-0" style={{ padding: "13px 22px", background: "rgba(5,4,14,0.6)", backdropFilter: "blur(40px)", borderBottom: "1px solid rgba(255,255,255,0.04)", animation: "topIn 0.7s cubic-bezier(0.22,1,0.36,1) both 0.1s" }}>
             <div className="flex items-center gap-3">
               <div className="relative flex items-center justify-center rounded-full flex-shrink-0" style={{ width: 36, height: 36, background: "linear-gradient(135deg,#1e40af,#3b82f6)", fontFamily: "'Instrument Serif', serif", fontSize: 16, color: "#fff", fontStyle: "italic", boxShadow: "0 0 16px rgba(59,130,246,0.4)" }}>
@@ -469,7 +521,6 @@ export default function ChatInterface() {
                   </div>
                   <div style={{ fontSize: 10, color: "#64748b", marginTop: 3, padding: "0 3px", ...(msg.role === "user" ? { textAlign: "right" } : {}) }}>{msg.time}</div>
 
-                  {/* Mood chips after first Eva message */}
                   {msg.role === "assistant" && i === 0 && showChips && (
                     <div className="flex flex-wrap gap-1.5 mt-2.5">
                       {["feeling anxious", "stressed out", "kinda low", "just here"].map((chip) => (
@@ -510,13 +561,29 @@ export default function ChatInterface() {
           {/* Memory bar */}
           <div className="flex items-center gap-1.5 flex-shrink-0 overflow-x-auto" style={{ padding: "7px 22px", background: "rgba(5,4,14,0.5)", borderTop: "1px solid rgba(255,255,255,0.03)", scrollbarWidth: "none" }}>
             <span style={{ fontSize: 9.5, color: "#64748b", whiteSpace: "nowrap", flexShrink: 0 }}>Memory:</span>
-            {userCapsules.slice(0, 3).map((c, i) => (
+
+            {/* Lock icon if PIN not yet entered this session */}
+            {!capsulesUnlocked && pinHash && (
+              <button onClick={() => requirePin("view")} className="flex items-center gap-1 flex-shrink-0" style={{ padding: "3px 10px", borderRadius: 9999, background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.18)", fontSize: 10, fontWeight: 600, color: "#d8b4fe", cursor: "pointer", whiteSpace: "nowrap" }}>
+                <svg width="9" height="9" fill="none" stroke="#d8b4fe" strokeWidth="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+                {userCapsules.length} capsule{userCapsules.length !== 1 ? "s" : ""} locked — tap to unlock
+              </button>
+            )}
+
+            {/* Show capsules only when unlocked */}
+            {capsulesUnlocked && userCapsules.slice(0, 3).map((c, i) => (
               <div key={i} className="flex items-center gap-1 flex-shrink-0" style={{ padding: "3px 10px", borderRadius: 9999, background: "rgba(168,85,247,0.08)", border: "1px solid rgba(168,85,247,0.18)", fontSize: 10, fontWeight: 600, color: "#d8b4fe", whiteSpace: "nowrap" }}>
                 <span style={{ width: 3.5, height: 3.5, borderRadius: "50%", background: "#d8b4fe", display: "inline-block" }} />
                 {c.slice(0, 20)}{c.length > 20 ? "…" : ""}
               </div>
             ))}
-            <button onClick={saveMemoryCapsule} className="flex items-center gap-1 flex-shrink-0 transition-all" style={{ padding: "3px 10px", borderRadius: 9999, background: savedCapsule ? "rgba(45,212,191,0.15)" : "rgba(59,130,246,0.07)", border: `1px solid ${savedCapsule ? "rgba(45,212,191,0.35)" : "rgba(59,130,246,0.18)"}`, fontSize: 10, fontWeight: 600, color: savedCapsule ? "#a0ffee" : "#93c5fd", whiteSpace: "nowrap", cursor: "pointer" }}>
+
+            {/* Save button — always visible but gates behind PIN */}
+            <button
+              onClick={() => requirePin("save")}
+              className="flex items-center gap-1 flex-shrink-0 transition-all"
+              style={{ padding: "3px 10px", borderRadius: 9999, background: savedCapsule ? "rgba(45,212,191,0.15)" : "rgba(59,130,246,0.07)", border: `1px solid ${savedCapsule ? "rgba(45,212,191,0.35)" : "rgba(59,130,246,0.18)"}`, fontSize: 10, fontWeight: 600, color: savedCapsule ? "#a0ffee" : "#93c5fd", whiteSpace: "nowrap", cursor: "pointer" }}
+            >
               {savedCapsule ? "✓ saved" : "+ save insight"}
             </button>
           </div>
@@ -555,6 +622,74 @@ export default function ChatInterface() {
           </div>
         </div>
       </div>
+
+      {/* ── PIN GATE MODAL ── */}
+      {showPinModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(10px)" }}>
+          <div style={{ background: "rgba(9,8,30,0.97)", border: "1px solid rgba(45,212,191,0.18)", borderRadius: 24, padding: "40px 36px", width: "100%", maxWidth: 360, margin: "0 16px", boxShadow: "0 24px 60px rgba(0,0,0,0.7)", animation: "modalIn 0.4s cubic-bezier(0.22,1,0.36,1) both" }}>
+
+            {/* Lock icon */}
+            <div className="flex items-center justify-center mb-5" style={{ width: 52, height: 52, borderRadius: 16, background: "rgba(45,212,191,0.1)", border: "1px solid rgba(45,212,191,0.25)", margin: "0 auto 20px" }}>
+              <svg width="22" height="22" fill="none" stroke="#2dd4bf" strokeWidth="1.8" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            </div>
+
+            <h2 style={{ fontFamily: "'Instrument Serif', serif", fontSize: 24, fontWeight: 400, color: "#fff", textAlign: "center", marginBottom: 6 }}>
+              {pendingPinAction === "save" ? "Save memory capsule" : "Unlock capsules"}
+            </h2>
+            <p style={{ fontSize: 12, color: "#64748b", textAlign: "center", marginBottom: 28, lineHeight: 1.6 }}>
+              Enter your 4-digit PIN to {pendingPinAction === "save" ? "save this insight" : "view your capsules"}
+            </p>
+
+            {/* PIN input */}
+            <input
+              ref={pinInputRef}
+              type="password"
+              inputMode="numeric"
+              className="pin-digit-input"
+              value={pinInput}
+              maxLength={4}
+              onChange={e => {
+                // Digits only
+                const digits = e.target.value.replace(/\D/g, "");
+                setPinInput(digits);
+                setPinError("");
+                // Auto-submit when 4 digits entered
+                if (digits.length === 4) {
+                  setTimeout(() => handlePinSubmit(), 80);
+                }
+              }}
+              onKeyDown={e => e.key === "Enter" && handlePinSubmit()}
+              placeholder="••••"
+              style={{
+                width: "100%", background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14,
+                padding: "14px 16px", fontSize: 22, color: "#e2e1ef",
+                fontFamily: "Inter, sans-serif", textAlign: "center",
+                letterSpacing: "0.5em", marginBottom: 8, transition: "border-color 0.2s"
+              }}
+            />
+
+            {pinError && (
+              <p style={{ fontSize: 12, color: "#f87171", textAlign: "center", marginBottom: 12 }}>{pinError}</p>
+            )}
+
+            <button
+              onClick={handlePinSubmit}
+              disabled={pinVerifying || pinInput.length !== 4}
+              style={{ width: "100%", padding: "13px 0", borderRadius: 14, background: "#2dd4bf", border: "none", fontSize: 14, fontWeight: 700, color: "#03020d", cursor: "pointer", fontFamily: "'Plus Jakarta Sans', sans-serif", marginTop: 4, opacity: (pinVerifying || pinInput.length !== 4) ? 0.5 : 1, transition: "opacity 0.2s" }}
+            >
+              {pinVerifying ? "Checking..." : "Unlock →"}
+            </button>
+
+            <button
+              onClick={() => { setShowPinModal(false); setPinInput(""); setPinError(""); }}
+              style={{ width: "100%", marginTop: 10, padding: "8px 0", background: "transparent", border: "none", fontSize: 12, color: "#64748b", cursor: "pointer" }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Crisis Modal */}
       {showCrisisModal && (
