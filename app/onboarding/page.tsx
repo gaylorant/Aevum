@@ -33,7 +33,8 @@ export default function OnboardingPage() {
   };
 
   const handleSubmit = async () => {
-    if (password.length !== 8) { setError("Password must be exactly 8 characters."); return; }
+    // CHANGED: was !== 8, now < 8
+    if (password.length < 8) { setError("Password must be more than 8 characters."); return; }
     if (pin && (pin.length !== 4 || !/^\d+$/.test(pin))) { setError("PIN must be exactly 4 digits."); return; }
     setLoading(true); setError("");
 
@@ -105,9 +106,11 @@ export default function OnboardingPage() {
           {step === "password" && (
             <>
               <h1 style={{ fontFamily: "Instrument Serif, serif", fontSize: 32, fontWeight: 400, color: "#fff", marginBottom: 8, lineHeight: 1.2 }}>Set a password</h1>
-              <p style={{ fontSize: 13, color: "rgba(226,225,239,0.4)", marginBottom: 32, lineHeight: 1.7 }}>You'll enter this every time you log in with Google. Exactly 8 characters.</p>
+              {/* CHANGED: updated description text */}
+              <p style={{ fontSize: 13, color: "rgba(226,225,239,0.4)", marginBottom: 32, lineHeight: 1.7 }}>You'll enter this every time you log in. Must be more than 8 characters.</p>
               <div style={{ marginBottom: 20 }}>
-                <label style={{ fontSize: 11, fontWeight: 600, color: "rgba(184,195,255,0.5)", letterSpacing: "0.06em", textTransform: "uppercase" as const, display: "block", marginBottom: 8 }}>Password (8 characters)</label>
+                {/* CHANGED: updated label text */}
+                <label style={{ fontSize: 11, fontWeight: 600, color: "rgba(184,195,255,0.5)", letterSpacing: "0.06em", textTransform: "uppercase" as const, display: "block", marginBottom: 8 }}>Password (min. 8 characters)</label>
                 <input
                   className="input-field"
                   type="password"
@@ -115,7 +118,7 @@ export default function OnboardingPage() {
                   onChange={e => { setPassword(e.target.value); setError(""); }}
                   onKeyDown={e => e.key === "Enter" && setStep("pin")}
                   placeholder="••••••••"
-                  maxLength={8}
+                  // CHANGED: removed maxLength so user can type more than 8
                   style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14, padding: "13px 16px", fontSize: 15, color: "#e2e1ef", fontFamily: "Inter, sans-serif", transition: "border-color 0.2s" }}
                 />
               </div>
@@ -146,7 +149,8 @@ export default function OnboardingPage() {
 
           <button
             className="btn-main"
-            onClick={step === "username" ? checkUsername : step === "password" ? () => { if (password.length !== 8) { setError("Password must be exactly 8 characters."); return; } setError(""); setStep("pin"); } : handleSubmit}
+            // CHANGED: validation on password step now checks < 8 instead of !== 8
+            onClick={step === "username" ? checkUsername : step === "password" ? () => { if (password.length < 8) { setError("Password must be more than 8 characters."); return; } setError(""); setStep("pin"); } : handleSubmit}
             disabled={loading}
             style={{ width: "100%", padding: "14px 0", borderRadius: 14, background: "#3b82f6", border: "none", fontSize: 14, fontWeight: 700, color: "#fff", cursor: "pointer", fontFamily: "Plus Jakarta Sans, sans-serif", boxShadow: "0 0 28px -6px rgba(59,130,246,0.6)", opacity: loading ? 0.6 : 1 }}
           >
