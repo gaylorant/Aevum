@@ -391,7 +391,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
     }
 
-    const apiKey = process.env.GROQ_API_KEY;
+    const apiKey = process.env.NEXT_GROQ_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: "GROQ_API_KEY not configured" }, { status: 500 });
     }
